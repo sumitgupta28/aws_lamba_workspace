@@ -6,16 +6,216 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
 provider "aws" {
-  region = var.aws_region
-  profile ="lambda_manager_profile"
+  region  = var.aws_region
+  profile = "lambda_manager_profile"
 }
 
 # -----------------------------------------------------------------------
-# IAM: Execution Role
+# Random password for RDS (stored in Terraform state)
+# -----------------------------------------------------------------------
+
+resource "random_password" "db_password" {
+  length  = 20
+  special = false
+}
+
+# -----------------------------------------------------------------------
+# VPC — two private subnets in different AZs (no NAT gateway needed;
+# S3 access goes through the free Gateway VPC Endpoint below)
+# -----------------------------------------------------------------------
+
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name        = "${var.function_name}-vpc"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+resource "aws_subnet" "private_a" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = data.aws_availability_zones.available.names[0]
+
+  tags = {
+    Name        = "${var.function_name}-private-a"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_subnet" "private_b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = data.aws_availability_zones.available.names[1]
+
+  tags = {
+    Name        = "${var.function_name}-private-b"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# Route table for private subnets (used by S3 Gateway Endpoint)
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name        = "${var.function_name}-private-rt"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "private_b" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private.id
+}
+
+# S3 Gateway VPC Endpoint — free; allows Lambda in the VPC to reach S3
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+
+  tags = {
+    Name        = "${var.function_name}-s3-endpoint"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# -----------------------------------------------------------------------
+# Security Groups
+# -----------------------------------------------------------------------
+
+resource "aws_security_group" "lambda" {
+  name        = "${var.function_name}-lambda-sg"
+  description = "Lambda function egress to RDS and S3 endpoint"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    description     = "PostgreSQL to RDS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds.id]
+  }
+
+  egress {
+    description = "HTTPS for S3 VPC endpoint"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.function_name}-lambda-sg"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_security_group" "rds" {
+  name        = "${var.function_name}-rds-sg"
+  description = "RDS ingress from Lambda only"
+  vpc_id      = aws_vpc.main.id
+
+  tags = {
+    Name        = "${var.function_name}-rds-sg"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_security_group_rule" "rds_from_lambda" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rds.id
+  source_security_group_id = aws_security_group.lambda.id
+  description              = "PostgreSQL from Lambda"
+}
+
+# -----------------------------------------------------------------------
+# RDS PostgreSQL — free tier: db.t3.micro, 20 GB gp2, single-AZ
+# -----------------------------------------------------------------------
+
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.function_name}-db-subnet-group"
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_db_instance" "postgres" {
+  identifier        = "${var.function_name}-db"
+  engine            = "postgres"
+  engine_version    = "15"
+  instance_class    = "db.t3.micro"
+  allocated_storage = 20
+  storage_type      = "gp2"
+
+  db_name  = var.db_name
+  username = var.db_username
+  password = random_password.db_password.result
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+
+  multi_az               = false
+  publicly_accessible    = false
+  skip_final_snapshot    = true
+  deletion_protection    = false
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# -----------------------------------------------------------------------
+# S3 bucket for CSV uploads
+# -----------------------------------------------------------------------
+
+resource "aws_s3_bucket" "csv_uploads" {
+  bucket_prefix = "${var.function_name}-csv-"
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# -----------------------------------------------------------------------
+# IAM: Lambda Execution Role
 # -----------------------------------------------------------------------
 
 data "aws_iam_policy_document" "lambda_assume_role" {
@@ -45,11 +245,34 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Required for Lambda to create/manage ENIs when running inside a VPC
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+data "aws_iam_policy_document" "lambda_s3_read" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject", "s3:ListBucket"]
+    resources = [
+      aws_s3_bucket.csv_uploads.arn,
+      "${aws_s3_bucket.csv_uploads.arn}/*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_s3_read" {
+  name   = "${var.function_name}-s3-read"
+  role   = aws_iam_role.lambda_exec.id
+  policy = data.aws_iam_policy_document.lambda_s3_read.json
+}
+
 # -----------------------------------------------------------------------
 # Lambda Function
 # -----------------------------------------------------------------------
 
-resource "aws_lambda_function" "hello_world" {
+resource "aws_lambda_function" "csv_to_rds" {
   function_name    = var.function_name
   filename         = "${path.module}/lambda.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda.zip")
@@ -58,11 +281,21 @@ resource "aws_lambda_function" "hello_world" {
   handler = "handler.lambda_handler"
   runtime = "python3.12"
 
-  timeout     = 10
+  timeout     = 60
   memory_size = 128
+
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+    security_group_ids = [aws_security_group.lambda.id]
+  }
 
   environment {
     variables = {
+      DB_HOST     = aws_db_instance.postgres.address
+      DB_PORT     = "5432"
+      DB_NAME     = var.db_name
+      DB_USER     = var.db_username
+      DB_PASSWORD = random_password.db_password.result
       ENVIRONMENT = var.environment
     }
   }
@@ -72,46 +305,30 @@ resource "aws_lambda_function" "hello_world" {
     ManagedBy   = "terraform"
   }
 
-  depends_on = [aws_iam_role_policy_attachment.lambda_basic_exec]
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_exec,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+  ]
 }
 
-# -----------------------------------------------------------------------
-# API Gateway v2 (HTTP API)
-# -----------------------------------------------------------------------
-
-resource "aws_apigatewayv2_api" "http_api" {
-  name          = "${var.function_name}-api"
-  protocol_type = "HTTP"
-
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }
-}
-
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.http_api.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = aws_apigatewayv2_api.http_api.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.hello_world.invoke_arn
-  payload_format_version = "2.0"
-}
-
-resource "aws_apigatewayv2_route" "get_hello" {
-  api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "GET /hello"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_lambda_permission" "api_gw" {
-  statement_id  = "AllowAPIGatewayInvoke"
+# Allow S3 to invoke the Lambda function
+resource "aws_lambda_permission" "s3_invoke" {
+  statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.hello_world.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+  function_name = aws_lambda_function.csv_to_rds.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.csv_uploads.arn
+}
+
+# S3 event notification — triggers Lambda on any *.csv upload
+resource "aws_s3_bucket_notification" "csv_trigger" {
+  bucket = aws_s3_bucket.csv_uploads.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.csv_to_rds.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_suffix       = ".csv"
+  }
+
+  depends_on = [aws_lambda_permission.s3_invoke]
 }

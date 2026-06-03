@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds a deployable Lambda zip at terraform/lambda.zip
+# Builds a deployable Lambda zip at terraform-lambda/lambda.zip
 set -euo pipefail
 
 LAMBDA_SRC="$(cd "$(dirname "$0")/../lambda" && pwd)"
-OUTPUT="$(cd "$(dirname "$0")/../terraform" && pwd)/lambda.zip"
+OUTPUT="$(cd "$(dirname "$0")/../terraform-lambda" && pwd)/lambda.zip"
 
 echo "Packaging Lambda from: $LAMBDA_SRC"
 echo "Output:               $OUTPUT"

@@ -1,19 +1,25 @@
 output "lambda_function_name" {
   description = "Deployed Lambda function name."
-  value       = aws_lambda_function.hello_world.function_name
+  value       = aws_lambda_function.csv_to_rds.function_name
 }
 
 output "lambda_function_arn" {
   description = "ARN of the deployed Lambda function."
-  value       = aws_lambda_function.hello_world.arn
+  value       = aws_lambda_function.csv_to_rds.arn
 }
 
-output "api_gateway_url" {
-  description = "Base URL for the HTTP API."
-  value       = aws_apigatewayv2_stage.default.invoke_url
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket to upload CSV files into."
+  value       = aws_s3_bucket.csv_uploads.bucket
 }
 
-output "invoke_url" {
-  description = "Direct curl-ready URL for the hello endpoint."
-  value       = "${aws_apigatewayv2_stage.default.invoke_url}/hello"
+output "rds_endpoint" {
+  description = "RDS PostgreSQL hostname (reachable from within the VPC)."
+  value       = aws_db_instance.postgres.address
+}
+
+output "db_password" {
+  description = "Generated RDS master password (also stored in Terraform state)."
+  value       = random_password.db_password.result
+  sensitive   = true
 }
