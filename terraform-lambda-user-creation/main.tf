@@ -93,6 +93,8 @@ data "aws_iam_policy_document" "lambda_management_permissions" {
       "s3:GetLifecycleConfiguration",
       "s3:GetReplicationConfiguration",
       "s3:ListAllMyBuckets",
+      "s3:GetBucketAcl",
+      "s3:GetEncryptionConfiguration",
     ]
     resources = ["*"]
   }
@@ -154,6 +156,7 @@ data "aws_iam_policy_document" "lambda_management_permissions" {
       "ec2:CreateNetworkInterface",
       "ec2:DeleteNetworkInterface",
       "ec2:DescribePrefixLists",
+      "ec2:DescribeSecurityGroupRules",
     ]
     resources = ["*"]
   }
