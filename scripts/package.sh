@@ -12,7 +12,15 @@ STAGING=$(mktemp -d)
 trap "rm -rf $STAGING" EXIT
 
 if [ -s "$LAMBDA_SRC/requirements.txt" ]; then
-    pip3 install -r "$LAMBDA_SRC/requirements.txt" --target "$STAGING" --quiet
+    pip3 install -r "$LAMBDA_SRC/requirements.txt" \
+        --platform manylinux2014_x86_64 \
+        --implementation cp \
+        --python-version 3.12 \
+        --only-binary=:all: \
+        --trusted-host pypi.org \
+        --trusted-host files.pythonhosted.org \
+        --target "$STAGING" \
+        --quiet
 fi
 
 cp "$LAMBDA_SRC/handler.py" "$STAGING/"
