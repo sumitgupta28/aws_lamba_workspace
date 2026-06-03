@@ -1,0 +1,101 @@
+user_id,first_name,last_name,email,phone,date_of_birth,street_address,city,state,zip_code,country,department,status,created_at
+1a3d1fa7-bc89-60a9-23b8-c1e9392456de,Kenneth,Davis,kenneth.davis@gmail.com,+1-892-858-9935,1970-12-26,1425 Park Blvd,Dallas,TX,75201,US,Engineering,active,2024-02-07
+b38a088c-a65e-d389-b74d-0fb132e70629,Joseph,Allen,joseph.allen@icloud.com,+1-758-529-4611,1985-03-05,7360 Pine Rd,New York,NY,10001,US,Engineering,active,2024-12-14
+6142ea7d-17be-3111-1a2a-73ed562b0f79,Lisa,Moore,lisa.moore@yahoo.com,+1-299-467-6635,1994-04-01,9892 Pine Rd,San Antonio,TX,78201,US,Engineering,inactive,2024-09-04
+dc98d2c1-e2ac-f72f-9e57-4f7aa0ee89ae,Matthew,Garcia,matthew.garcia@icloud.com,+1-570-691-4150,1997-03-15,1140 Main St,San Jose,CA,95101,US,Finance,active,2024-02-28
+29a3b2e9-5d65-a441-d588-42dea2bc372f,Joseph,Miller,joseph.miller@hotmail.com,+1-579-463-4432,1980-05-03,4375 Oak Ave,Dallas,TX,75201,US,Sales,suspended,2024-12-08
+af42e12f-3838-b326-8e94-4239b02b61c4,David,Robinson,david.robinson@hotmail.com,+1-532-963-1916,1988-09-15,3753 Main St,Dallas,TX,75201,US,Operations,inactive,2024-05-03
+e27a984d-6548-21d0-7fcd-9eb1a7cad415,Susan,Torres,susan.torres@example.com,+1-858-569-3340,1969-07-15,4340 Maple Dr,Austin,TX,73301,US,Finance,suspended,2024-09-09
+ff5e9ff0-ff50-bde4-3825-67b85cabcc97,Melissa,Nguyen,melissa.nguyen@hotmail.com,+1-341-621-9085,1977-11-30,1490 Main St,Denver,CO,80201,US,Marketing,active,2024-11-06
+77d21e02-ff01-cf99-988c-24c961b1cd22,Carol,Ramirez,carol.ramirez@icloud.com,+1-741-357-1188,1977-04-05,1877 Pine Rd,Chicago,IL,60601,US,Operations,active,2024-05-14
+e9a1fa6f-81f7-6d1c-2dbc-2134c30ff46e,David,Robinson,david.robinson@gmail.com,+1-308-991-5889,1982-06-15,8318 Cedar Ln,Dallas,TX,75201,US,Sales,active,2024-03-18
+edd96831-1ca3-5cfb-04fc-6d827d154385,Deborah,King,deborah.king@gmail.com,+1-571-999-6038,1974-07-16,3924 Main St,Nashville,TN,37201,US,Finance,suspended,2024-02-03
+79ac1b1e-a8e5-6e0c-20de-435d2031d750,George,Young,george.young@gmail.com,+1-762-269-5342,1994-05-09,8646 Park Blvd,Seattle,WA,98101,US,Finance,suspended,2024-12-23
+e64d1bcb-7027-53a1-5f98-7c71a65e688e,Richard,Rivera,richard.rivera@outlook.com,+1-729-562-2982,1990-02-16,4062 Cedar Ln,Fort Worth,TX,76101,US,Marketing,active,2024-01-19
+0f1259e0-a18f-f6b6-b535-106e122c9a56,Kimberly,Anderson,kimberly.anderson@icloud.com,+1-434-169-1514,1960-04-27,5414 Oak Ave,San Diego,CA,92101,US,Finance,active,2024-11-16
+7914c120-c8dc-d19f-3e35-11287900f7f9,Susan,Wright,susan.wright@yahoo.com,+1-616-294-2545,1985-11-05,1589 Park Blvd,Denver,CO,80201,US,Operations,inactive,2024-07-15
+ccf3a171-56dc-8907-ba6c-34ab6712303a,George,Brown,george.brown@example.com,+1-311-354-4139,1962-09-20,3117 Lake Dr,Houston,TX,77001,US,Sales,inactive,2024-03-09
+19108be5-8ce2-1ea3-db20-a56edc815fe7,Sandra,Thomas,sandra.thomas@gmail.com,+1-251-767-9856,1996-03-30,242 Oak Ave,Charlotte,NC,28201,US,Finance,active,2024-07-16
+63f2ae24-fc3d-3348-008d-4127610461e3,Donald,Wilson,donald.wilson@hotmail.com,+1-471-902-8454,1967-05-21,4674 Park Blvd,Los Angeles,CA,90001,US,Legal,active,2024-04-10
+0cd620c2-0ea2-622b-5048-67babf7b539b,Susan,Brown,susan.brown@icloud.com,+1-798-588-9238,1962-09-25,8702 Maple Dr,Seattle,WA,98101,US,Engineering,suspended,2024-02-28
+1eb0e38a-675d-d5af-3c36-5296dca02eec,Elizabeth,Jones,elizabeth.jones@icloud.com,+1-783-352-1651,1990-04-15,1344 Park Blvd,Chicago,IL,60601,US,Operations,active,2024-04-22
+4ccc9bc2-a53f-8a28-abf3-e3fc21813d25,Amanda,Lee,amanda.lee@yahoo.com,+1-668-423-2188,1977-10-02,153 Lake Dr,Dallas,TX,75201,US,Marketing,active,2024-09-07
+5e9953d2-3e89-6c64-e117-dac3119c4ea3,Steven,Taylor,steven.taylor@yahoo.com,+1-491-261-8179,1999-07-07,8901 Pine Rd,Jacksonville,FL,32099,US,Engineering,suspended,2024-05-22
+27cb6f2a-8da0-1097-be0f-051b1b66b5a9,Michael,Rodriguez,michael.rodriguez@outlook.com,+1-478-388-4450,1999-11-29,5618 Cedar Ln,Houston,TX,77001,US,HR,suspended,2024-08-09
+5563f616-00e8-5ece-0b49-452d46d483f3,Patricia,Garcia,patricia.garcia@example.com,+1-989-233-5291,1997-03-15,2648 Lake Dr,Columbus,OH,43085,US,Product,suspended,2024-01-04
+8d7248e2-951f-58d0-5e84-f058d5a804eb,Robert,Hall,robert.hall@yahoo.com,+1-351-540-3088,1961-08-13,686 Pine Rd,Seattle,WA,98101,US,Operations,active,2024-06-07
+dfed2c43-e256-a6dc-8f54-86b7c7b5b2bc,Carol,Thomas,carol.thomas@example.com,+1-616-735-3532,1975-11-12,3879 Maple Dr,Houston,TX,77001,US,Sales,inactive,2024-01-06
+1bac27a7-b386-f7a4-c991-603f28c13091,Melissa,Perez,melissa.perez@hotmail.com,+1-591-993-1634,1971-12-20,7712 Cedar Ln,San Diego,CA,92101,US,Finance,inactive,2024-06-10
+11c58ef0-dd46-3c09-4752-87aa5408f9ac,Joseph,Anderson,joseph.anderson@gmail.com,+1-991-385-6753,1977-11-15,8347 Park Blvd,San Antonio,TX,78201,US,Operations,active,2024-02-09
+ba81edd9-587e-f344-6f3f-920c98b8e4cc,Elizabeth,Nguyen,elizabeth.nguyen@outlook.com,+1-521-546-9379,1964-11-11,1895 Park Blvd,Los Angeles,CA,90001,US,Finance,active,2024-01-23
+bcae8081-bdf0-70aa-f0b5-156bb82c9074,Margaret,Smith,margaret.smith@icloud.com,+1-886-301-6967,1990-10-23,7067 Oak Ave,Seattle,WA,98101,US,Operations,suspended,2024-06-22
+6703b636-5380-b904-688c-7015aab97e49,Linda,Campbell,linda.campbell@outlook.com,+1-913-402-3085,1973-11-15,3144 Park Blvd,San Francisco,CA,94102,US,Product,active,2024-10-19
+c9277d9b-6e0d-2648-35ce-884149732d6c,Karen,Sanchez,karen.sanchez@icloud.com,+1-793-721-6279,1973-08-18,7619 Lake Dr,New York,NY,10001,US,Legal,active,2024-09-16
+9e87e04c-a208-6977-a9f2-533683f4a9a9,Melissa,Hernandez,melissa.hernandez@example.com,+1-543-195-4848,1972-09-23,5086 Cedar Ln,Chicago,IL,60601,US,Finance,active,2024-01-02
+935f2b0a-a138-4ddc-e2d9-de5d6a18ce4c,Jessica,Walker,jessica.walker@icloud.com,+1-399-835-7291,1980-06-05,8100 Park Blvd,Chicago,IL,60601,US,Finance,active,2024-11-23
+b227462c-f53d-4330-cdda-24ba2d06e8cf,James,Carter,james.carter@gmail.com,+1-730-575-1822,1969-10-25,9133 Cedar Ln,Columbus,OH,43085,US,Marketing,inactive,2024-03-26
+e4347d51-c158-1092-f335-cba3513a7052,Sandra,Nelson,sandra.nelson@icloud.com,+1-653-727-9270,1986-09-16,6992 Lake Dr,Seattle,WA,98101,US,Sales,inactive,2024-08-09
+a07295e9-7c0e-8cd8-8573-e793c715b2b9,Timothy,Thomas,timothy.thomas@example.com,+1-444-381-8206,1994-05-09,1270 Pine Rd,Dallas,TX,75201,US,Finance,active,2024-06-11
+b4d7e28e-271e-3ee2-b1a6-b1f1620e99d3,Paul,Garcia,paul.garcia@yahoo.com,+1-419-165-7797,1970-05-16,6679 Elm St,Phoenix,AZ,85001,US,Legal,inactive,2024-01-07
+6160a6b4-9360-715f-c3fe-0183e172b725,Anthony,Harris,anthony.harris@icloud.com,+1-688-106-6763,1998-06-06,4893 Park Blvd,New York,NY,10001,US,Product,suspended,2024-12-24
+076e2bba-7c53-08bf-6f92-f25e45df16b6,Paul,Hill,paul.hill@yahoo.com,+1-598-444-7624,1969-11-04,2705 Lake Dr,Indianapolis,IN,46201,US,Sales,suspended,2024-09-01
+dde9f863-22bd-3388-6db9-9102a48b3dbe,Betty,Nguyen,betty.nguyen@icloud.com,+1-672-286-1823,1963-10-07,4263 Park Blvd,New York,NY,10001,US,Operations,active,2024-08-11
+4094dded-6beb-ac31-d4f8-fd72f3821cfd,Lisa,Carter,lisa.carter@hotmail.com,+1-283-581-1317,1993-09-24,8838 Main St,Dallas,TX,75201,US,Operations,active,2024-11-03
+9f0fda8d-0537-9ff6-d6d7-b3b833094d35,Deborah,Adams,deborah.adams@gmail.com,+1-356-344-3068,1971-02-03,7759 Oak Ave,New York,NY,10001,US,Finance,inactive,2024-12-09
+1d5206ab-b7e6-427c-bf78-0e3ff6b751f7,Deborah,White,deborah.white@yahoo.com,+1-996-938-3683,1987-03-29,5097 Oak Ave,Nashville,TN,37201,US,Engineering,active,2024-10-22
+a092f52a-d4a0-57a7-b0cc-1b3b9793b9b4,Matthew,Sanchez,matthew.sanchez@example.com,+1-448-204-5941,1963-05-30,9838 Oak Ave,San Antonio,TX,78201,US,Engineering,active,2024-09-14
+6b88f83d-d97d-c9cd-033d-2bce575aed2c,Kevin,White,kevin.white@gmail.com,+1-701-208-8102,1989-01-17,5935 Lake Dr,San Francisco,CA,94102,US,Sales,inactive,2024-03-24
+7bc67e1f-c64e-e6e3-89c5-b31aeb6c1016,Dorothy,Adams,dorothy.adams@outlook.com,+1-676-546-5397,1996-04-02,5281 Cedar Ln,Nashville,TN,37201,US,Marketing,active,2024-08-08
+7e8adee7-0758-e201-561e-16d16105716b,Timothy,Robinson,timothy.robinson@icloud.com,+1-532-286-8988,1989-12-21,3476 Elm St,Nashville,TN,37201,US,HR,active,2024-05-20
+3dc98290-15ea-bb27-30e9-12f2f2b43abf,Brian,Moore,brian.moore@icloud.com,+1-937-516-9004,1983-03-05,9097 Cedar Ln,New York,NY,10001,US,Legal,inactive,2024-08-26
+a9f948b2-4e63-84bb-3e49-3f43b118f68d,Mary,Garcia,mary.garcia@outlook.com,+1-795-477-8753,1978-02-20,9069 Elm St,San Diego,CA,92101,US,Product,suspended,2024-06-12
+314d3441-b8a6-171f-1ee3-4dc43b048a8b,Brian,Robinson,brian.robinson@outlook.com,+1-523-222-9779,1971-04-11,3034 Cedar Ln,San Jose,CA,95101,US,Finance,inactive,2024-05-24
+31b1b099-d527-21e7-19bc-143efb02bebb,Emily,Carter,emily.carter@icloud.com,+1-503-332-6912,1972-09-10,2940 Pine Rd,Nashville,TN,37201,US,Engineering,suspended,2024-03-09
+de53790a-a34b-6cf6-2053-da42f1afdb65,John,Brown,john.brown@icloud.com,+1-970-602-2680,1991-04-14,201 Pine Rd,San Jose,CA,95101,US,Legal,inactive,2024-08-11
+7de31a51-6694-c343-10ba-58e3d2762bdc,Elizabeth,Brown,elizabeth.brown@outlook.com,+1-275-690-1878,1965-02-12,2486 Maple Dr,Indianapolis,IN,46201,US,HR,active,2024-04-04
+c693da11-39c6-a1ca-9e50-aa42ca6dfda1,Kimberly,Carter,kimberly.carter@hotmail.com,+1-735-489-8381,1986-09-27,7254 Pine Rd,Nashville,TN,37201,US,Product,active,2024-10-20
+43bfd931-3605-bf54-a021-c0ca3531968d,Patricia,Flores,patricia.flores@example.com,+1-876-183-3573,1994-03-19,3930 Maple Dr,Houston,TX,77001,US,Marketing,active,2024-01-14
+b4fb0eb9-49c1-3de7-3b42-06c5085b15fb,Mark,Hall,mark.hall@icloud.com,+1-489-819-8438,1973-01-23,1167 Cedar Ln,Indianapolis,IN,46201,US,HR,suspended,2024-11-26
+44007d5a-e88d-a719-2624-2b40a5cb63a2,Richard,Ramirez,richard.ramirez@gmail.com,+1-345-173-1977,1970-01-31,2719 Pine Rd,Seattle,WA,98101,US,HR,inactive,2024-02-15
+7010f719-7e69-5d0d-8a3c-3b5e801ef1da,Brian,Martin,brian.martin@example.com,+1-282-712-1653,1972-03-18,7079 Elm St,Fort Worth,TX,76101,US,HR,active,2024-02-08
+9384ec2b-44fe-acae-d248-a9a7ac1aa554,Carol,Torres,carol.torres@icloud.com,+1-241-881-3870,1994-04-21,7709 Lake Dr,New York,NY,10001,US,HR,active,2024-10-14
+ab8ddeb4-5230-dfbd-5553-b2fe6889803e,Kenneth,Young,kenneth.young@gmail.com,+1-307-978-3634,1975-08-10,5404 Park Blvd,Indianapolis,IN,46201,US,Legal,active,2024-11-13
+1dad09b2-52c2-1221-409d-360250843242,Timothy,Scott,timothy.scott@gmail.com,+1-991-513-9431,1963-12-13,19 Lake Dr,Charlotte,NC,28201,US,Product,active,2024-04-17
+8c99a894-445d-cc38-341c-64940d366dfc,Nancy,Flores,nancy.flores@hotmail.com,+1-334-394-8178,1994-02-02,7942 Oak Ave,Charlotte,NC,28201,US,Engineering,suspended,2024-04-23
+fe049059-3985-fb62-17dc-8eff687213f9,David,Martin,david.martin@icloud.com,+1-316-572-2924,1984-10-09,2523 Lake Dr,New York,NY,10001,US,HR,suspended,2024-12-09
+30cbd755-6232-b17a-2507-41818d1fb540,Anthony,Walker,anthony.walker@hotmail.com,+1-813-620-3236,1980-06-27,1144 Pine Rd,San Diego,CA,92101,US,Product,active,2024-09-09
+a8f1e091-ffb8-102d-9475-dbc996418ced,James,Jackson,james.jackson@example.com,+1-701-986-3434,1997-07-26,7317 Lake Dr,San Jose,CA,95101,US,Operations,active,2024-09-25
+3d225c30-b28f-41de-fb14-0bc3304b8590,Paul,Harris,paul.harris@hotmail.com,+1-785-492-4826,1999-01-03,6731 Main St,Austin,TX,73301,US,Operations,inactive,2024-12-26
+80962718-2051-acef-097a-1e10f6febc0e,Matthew,Harris,matthew.harris@example.com,+1-804-439-2644,1982-03-21,7214 Oak Ave,Phoenix,AZ,85001,US,Legal,active,2024-12-05
+56abf2f1-43d8-8870-f81d-baa1c8120a8e,Anthony,Adams,anthony.adams@yahoo.com,+1-838-809-7512,1981-01-22,1316 Elm St,Chicago,IL,60601,US,Product,active,2024-11-23
+af34cf65-a193-c4b2-3c19-e71d118405ad,Timothy,Young,timothy.young@icloud.com,+1-494-332-2480,1987-09-12,7111 Oak Ave,Los Angeles,CA,90001,US,Marketing,inactive,2024-03-23
+5ff595ea-5bc4-40f1-4b1a-269b0e5dd462,Karen,Johnson,karen.johnson@gmail.com,+1-641-249-5000,1995-09-18,8703 Park Blvd,Austin,TX,73301,US,Sales,active,2024-03-03
+3b70b3a1-24a3-5cf2-9549-c931e9af299d,Donna,Harris,donna.harris@icloud.com,+1-672-753-5161,1982-04-28,7530 Pine Rd,San Diego,CA,92101,US,Engineering,inactive,2024-05-22
+a3917c99-4c95-5f6a-966b-1964fcd6bdca,Paul,Hernandez,paul.hernandez@gmail.com,+1-634-806-5097,1975-07-02,7485 Pine Rd,Charlotte,NC,28201,US,Finance,inactive,2024-08-04
+4b943e30-b303-f438-fe21-10d04bbe4aff,Jessica,Harris,jessica.harris@icloud.com,+1-222-949-7484,1985-10-13,4498 Main St,Jacksonville,FL,32099,US,Engineering,suspended,2024-12-16
+30ac7d7b-a2f9-63a3-3810-ae665a31b4cc,Charles,Roberts,charles.roberts@yahoo.com,+1-835-356-3240,1995-12-21,1592 Main St,Nashville,TN,37201,US,HR,inactive,2024-01-19
+6a5e6920-bf5a-e7e6-53a3-dd5a4b8c5bdc,Nancy,Campbell,nancy.campbell@yahoo.com,+1-379-305-3165,2000-10-20,8838 Elm St,Chicago,IL,60601,US,HR,active,2024-05-27
+1346d1a9-f680-2cdb-77e4-90c71d7bc313,Donald,Jackson,donald.jackson@example.com,+1-344-872-4696,1996-01-28,6512 Elm St,Austin,TX,73301,US,Marketing,inactive,2024-01-09
+95a5bafa-431d-029f-ac1e-86d8bfbf397b,Paul,Davis,paul.davis@hotmail.com,+1-590-942-7086,1990-03-07,1776 Cedar Ln,Jacksonville,FL,32099,US,Legal,active,2024-10-18
+b379cb1e-e8cd-a0cc-76da-3ca0d2e82f38,Christopher,Flores,christopher.flores@yahoo.com,+1-509-764-7689,1988-07-02,1912 Maple Dr,Chicago,IL,60601,US,Engineering,active,2024-05-16
+aba4fc03-5efa-9c5b-7421-ff46637e4b01,Linda,Miller,linda.miller@yahoo.com,+1-960-813-9850,1966-01-31,6867 Maple Dr,Seattle,WA,98101,US,Product,active,2024-08-20
+3c71e0be-f357-9560-71d7-966571818dcf,Anthony,Moore,anthony.moore@gmail.com,+1-571-201-7018,1969-09-29,8921 Elm St,Jacksonville,FL,32099,US,Engineering,inactive,2024-05-07
+0577aea9-f899-9246-98de-8ebba3b5cece,Linda,Robinson,linda.robinson@gmail.com,+1-251-905-6464,1988-10-13,3991 Maple Dr,San Antonio,TX,78201,US,Finance,active,2024-09-07
+989240ac-e689-33a9-c9e4-8e8c25c61c45,Emily,Wilson,emily.wilson@yahoo.com,+1-202-383-3370,1994-09-26,2130 Pine Rd,Austin,TX,73301,US,Sales,active,2024-11-28
+52e2afd9-96bf-10ab-3ce9-15e7c9d6a63b,Mary,Rodriguez,mary.rodriguez@gmail.com,+1-216-278-5347,1995-06-09,859 Maple Dr,Jacksonville,FL,32099,US,Product,suspended,2024-02-24
+80fb9296-73b6-a09b-1bea-f6ac97fa7f04,Robert,Walker,robert.walker@hotmail.com,+1-426-729-1710,1983-01-08,8544 Pine Rd,Jacksonville,FL,32099,US,Legal,active,2024-01-16
+12d0498d-718d-4d05-e8e2-2743b65feea9,Betty,Ramirez,betty.ramirez@example.com,+1-282-429-3430,1981-12-28,1077 Maple Dr,Houston,TX,77001,US,HR,suspended,2024-11-19
+816bcb9f-7426-b193-4b7e-6b3c87d292a6,Kimberly,Rivera,kimberly.rivera@outlook.com,+1-819-540-2624,1986-10-18,1875 Cedar Ln,Fort Worth,TX,76101,US,Product,inactive,2024-04-14
+50018b7b-6d40-67f4-5003-2b3518578baf,Lisa,Robinson,lisa.robinson@hotmail.com,+1-881-361-7132,1992-09-22,2501 Lake Dr,Columbus,OH,43085,US,Marketing,active,2024-02-03
+96229348-0f5a-e9d3-8e6e-5003214f3f12,Margaret,Miller,margaret.miller@example.com,+1-775-675-6400,1996-05-31,2003 Park Blvd,Jacksonville,FL,32099,US,Operations,inactive,2024-12-02
+279c658a-3676-0ce5-81e5-c9f693f277cc,Charles,Hill,charles.hill@outlook.com,+1-872-593-4674,1964-08-24,1774 Elm St,Jacksonville,FL,32099,US,Operations,active,2024-05-19
+06b89231-8e86-7f3c-a487-eeabaccb461a,Joseph,Ramirez,joseph.ramirez@icloud.com,+1-823-773-5381,1987-07-10,475 Maple Dr,Nashville,TN,37201,US,HR,active,2024-06-12
+bdb025ff-2451-e5a4-11d0-59b26699cd99,James,Lopez,james.lopez@yahoo.com,+1-848-131-2503,1989-06-26,8692 Cedar Ln,Denver,CO,80201,US,Product,inactive,2024-08-11
+15bfbe97-98a2-1f1c-914d-cfaef10013a7,David,White,david.white@outlook.com,+1-253-259-3579,1994-11-05,816 Oak Ave,Austin,TX,73301,US,HR,inactive,2024-11-14
+1d2324e6-8329-20b7-c143-f426372f871a,Ashley,Hill,ashley.hill@hotmail.com,+1-553-540-2816,1972-04-02,4641 Lake Dr,Columbus,OH,43085,US,HR,active,2024-04-13
+2321d1e1-c471-04c0-3613-6e15f200c261,Joshua,Brown,joshua.brown@gmail.com,+1-982-361-5742,1973-07-09,5376 Oak Ave,San Antonio,TX,78201,US,Engineering,inactive,2024-12-14
+d556b37d-8f08-81ee-8011-316b3ae88926,Elizabeth,Rodriguez,elizabeth.rodriguez@hotmail.com,+1-884-925-6802,1991-07-25,1181 Park Blvd,Seattle,WA,98101,US,Engineering,inactive,2024-01-15
+6aedfdc7-a3e0-5309-b5a1-b94967884209,Robert,Lee,robert.lee@icloud.com,+1-496-217-7636,1985-09-20,342 Elm St,Columbus,OH,43085,US,Sales,suspended,2024-08-27
+96c044d0-6f88-7f28-3e49-fd091b19d8b8,Brian,White,brian.white@gmail.com,+1-610-636-2288,1997-11-18,6485 Pine Rd,Columbus,OH,43085,US,Operations,active,2024-06-25
+c6b6e4ad-e7ea-8d5a-31a3-ac4d828c37e7,David,Jones,david.jones@icloud.com,+1-557-459-3419,1983-10-20,3872 Oak Ave,Houston,TX,77001,US,Sales,active,2024-04-06
+7e7e7419-a0c1-4035-c5d9-5f51f387e1bd,Joshua,Martinez,joshua.martinez@example.com,+1-675-872-8354,1967-12-12,9249 Elm St,Chicago,IL,60601,US,Operations,active,2024-08-03
