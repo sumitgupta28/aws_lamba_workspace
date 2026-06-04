@@ -1,8 +1,12 @@
 import csv
 import io
+import logging
 
 from db import bulk_insert, connect
 from s3_reader import fetch_csv
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def process(bucket: str, key: str) -> dict:
@@ -17,9 +21,11 @@ def process(bucket: str, key: str) -> dict:
         )
         for r in reader
     ]
+    logger.info("Parsed %d rows from s3://%s/%s", len(rows), bucket, key)
     conn = connect()
     try:
         bulk_insert(conn, rows)
+        logger.info("Successfully inserted %d records into the database", len(rows))
     finally:
         conn.close()
     return {"inserted": len(rows), "file": key}

@@ -1,6 +1,10 @@
+import logging
 import os
 
 import psycopg2
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 _DDL = """
     CREATE TABLE IF NOT EXISTS users (
@@ -47,4 +51,6 @@ def bulk_insert(conn, rows: list[tuple]) -> None:
     with conn.cursor() as cur:
         cur.execute(_DDL)
         cur.executemany(_INSERT, rows)
+        inserted = cur.rowcount
     conn.commit()
+    logger.info("DB bulk_insert committed: %d rows affected (rowcount)", inserted)
