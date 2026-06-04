@@ -161,6 +161,7 @@ data "aws_iam_policy_document" "lambda_management_permissions" {
       "ec2:AttachInternetGateway",
       "ec2:DescribeInternetGateways",
       "ec2:DeleteInternetGateway",
+      "ec2:DetachInternetGateway",
       "ec2:CreateRoute",
       "ec2:DeleteRoute",
     ]
