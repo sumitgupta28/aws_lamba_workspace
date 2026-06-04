@@ -13,6 +13,11 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.csv_uploads.bucket
 }
 
+output "processed_bucket_name" {
+  description = "Name of the S3 bucket where processed CSV files are moved."
+  value       = aws_s3_bucket.csv_processed.bucket
+}
+
 output "rds_endpoint" {
   description = "RDS PostgreSQL hostname (reachable from within the VPC)."
   value       = aws_db_instance.postgres.address

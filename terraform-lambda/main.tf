@@ -290,6 +290,19 @@ resource "aws_s3_bucket" "csv_uploads" {
 }
 
 # -----------------------------------------------------------------------
+# S3 bucket for processed CSV files (moved here after successful DB ingestion)
+# -----------------------------------------------------------------------
+
+resource "aws_s3_bucket" "csv_processed" {
+  bucket_prefix = "${var.function_name}-processed-"
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# -----------------------------------------------------------------------
 # IAM: Lambda Execution Role
 # -----------------------------------------------------------------------
 
@@ -328,11 +341,22 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
 
 data "aws_iam_policy_document" "lambda_s3_read" {
   statement {
-    effect    = "Allow"
-    actions   = ["s3:GetObject", "s3:ListBucket"]
+    sid     = "IncomingBucket"
+    effect  = "Allow"
+    actions = ["s3:GetObject", "s3:ListBucket", "s3:DeleteObject"]
     resources = [
       aws_s3_bucket.csv_uploads.arn,
       "${aws_s3_bucket.csv_uploads.arn}/*",
+    ]
+  }
+
+  statement {
+    sid     = "ProcessedBucket"
+    effect  = "Allow"
+    actions = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+    resources = [
+      aws_s3_bucket.csv_processed.arn,
+      "${aws_s3_bucket.csv_processed.arn}/*",
     ]
   }
 }
@@ -378,12 +402,13 @@ resource "aws_lambda_function" "csv_to_rds" {
 
   environment {
     variables = {
-      DB_HOST     = aws_db_instance.postgres.address
-      DB_PORT     = "5432"
-      DB_NAME     = var.db_name
-      DB_USER     = var.db_username
-      DB_PASSWORD = random_password.db_password.result
-      ENVIRONMENT = var.environment
+      DB_HOST          = aws_db_instance.postgres.address
+      DB_PORT          = "5432"
+      DB_NAME          = var.db_name
+      DB_USER          = var.db_username
+      DB_PASSWORD      = random_password.db_password.result
+      ENVIRONMENT      = var.environment
+      PROCESSED_BUCKET = aws_s3_bucket.csv_processed.bucket
     }
   }
 

@@ -3,13 +3,13 @@ import io
 import logging
 
 from db import bulk_insert, connect
-from s3_reader import fetch_csv
+from s3_reader import fetch_csv, move_to_processed
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def process(bucket: str, key: str) -> dict:
+def process(bucket: str, key: str, processed_bucket: str) -> dict:
     content = fetch_csv(bucket, key)
     reader = csv.DictReader(io.StringIO(content))
     rows = [
@@ -28,4 +28,5 @@ def process(bucket: str, key: str) -> dict:
         logger.info("Successfully inserted %d records into the database", len(rows))
     finally:
         conn.close()
+    move_to_processed(bucket, key, processed_bucket)
     return {"inserted": len(rows), "file": key}

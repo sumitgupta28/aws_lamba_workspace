@@ -34,6 +34,7 @@ import service     # noqa: E402
 
 BUCKET = "test-users-bucket"
 KEY = "users/users.csv"
+PROCESSED_BUCKET = "test-processed-bucket"
 SAMPLE_ROWS = [
     {
         "user_id": "aaaaaaaa-0000-0000-0000-000000000001",
@@ -59,6 +60,7 @@ _AWS_ENV = {
     "AWS_DEFAULT_REGION": "us-east-1",
     "AWS_ACCESS_KEY_ID": "test",
     "AWS_SECRET_ACCESS_KEY": "test",
+    "PROCESSED_BUCKET": PROCESSED_BUCKET,
 }
 _DB_ENV = {
     "DB_HOST": "localhost", "DB_PORT": "5432",
@@ -85,6 +87,15 @@ def _mock_conn():
     return conn, cur
 
 
+def _setup_s3(rows=None):
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket=BUCKET)
+    s3.create_bucket(Bucket=PROCESSED_BUCKET)
+    if rows is not None:
+        s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(rows).encode())
+    return s3
+
+
 # ---------------------------------------------------------------------------
 # s3_reader layer
 # ---------------------------------------------------------------------------
@@ -93,9 +104,7 @@ def _mock_conn():
 @mock_aws
 def test_s3_reader_fetches_and_decodes():
     os.environ.update(_AWS_ENV)
-    s3 = boto3.client("s3", region_name="us-east-1")
-    s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+    _setup_s3(SAMPLE_ROWS)
 
     result = s3_reader.fetch_csv(BUCKET, KEY)
     assert "Alice" in result
@@ -149,13 +158,11 @@ def test_db_connect_uses_env_vars():
 @mock_aws
 def test_service_process_returns_count_and_key():
     os.environ.update({**_AWS_ENV, **_DB_ENV})
-    s3 = boto3.client("s3", region_name="us-east-1")
-    s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+    _setup_s3(SAMPLE_ROWS)
 
     conn, _ = _mock_conn()
     with patch("service.connect", return_value=conn):
-        result = service.process(BUCKET, KEY)
+        result = service.process(BUCKET, KEY, PROCESSED_BUCKET)
 
     assert result == {"inserted": 2, "file": KEY}
     conn.commit.assert_called_once()
@@ -167,15 +174,13 @@ def test_service_process_returns_count_and_key():
 def test_service_process_closes_conn_on_error():
     """conn.close() is called even when bulk_insert raises."""
     os.environ.update({**_AWS_ENV, **_DB_ENV})
-    s3 = boto3.client("s3", region_name="us-east-1")
-    s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+    _setup_s3(SAMPLE_ROWS)
 
     conn, _ = _mock_conn()
     with patch("service.connect", return_value=conn), \
          patch("service.bulk_insert", side_effect=RuntimeError("DB failure")):
         with pytest.raises(RuntimeError, match="DB failure"):
-            service.process(BUCKET, KEY)
+            service.process(BUCKET, KEY, PROCESSED_BUCKET)
     conn.close.assert_called_once()
 
 
@@ -187,9 +192,7 @@ def test_service_process_closes_conn_on_error():
 @mock_aws
 def test_handler_parses_event_and_returns_200():
     os.environ.update({**_AWS_ENV, **_DB_ENV})
-    s3 = boto3.client("s3", region_name="us-east-1")
-    s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+    _setup_s3(SAMPLE_ROWS)
 
     conn, cur = _mock_conn()
     with patch("db.psycopg2.connect", return_value=conn):
@@ -213,6 +216,7 @@ def test_handler_returns_correct_row_count_for_100_rows():
 
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=BUCKET)
+    s3.create_bucket(Bucket=PROCESSED_BUCKET)
     s3.put_object(Bucket=BUCKET, Key=KEY, Body=csv_content.encode())
 
     conn, _ = _mock_conn()
@@ -253,6 +257,7 @@ def test_handler_inserts_into_real_postgres():
 
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=BUCKET)
+    s3.create_bucket(Bucket=PROCESSED_BUCKET)
     s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
 
     response = handler.lambda_handler(_s3_event(BUCKET, KEY), None)
@@ -273,3 +278,56 @@ def test_handler_inserts_into_real_postgres():
             cur.execute("DROP TABLE IF EXISTS users")
         conn.commit()
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Processed bucket behaviour
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+@mock_aws
+def test_handler_copies_file_to_processed_bucket():
+    """File appears in processed bucket after successful Lambda invocation."""
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    s3 = _setup_s3(SAMPLE_ROWS)
+
+    conn, _ = _mock_conn()
+    with patch("db.psycopg2.connect", return_value=conn):
+        response = handler.lambda_handler(_s3_event(BUCKET, KEY), None)
+
+    assert response["statusCode"] == 200
+    obj = s3.get_object(Bucket=PROCESSED_BUCKET, Key=KEY)
+    assert "Alice" in obj["Body"].read().decode()
+
+
+@pytest.mark.unit
+@mock_aws
+def test_handler_deletes_file_from_incoming_bucket():
+    """File is removed from incoming bucket after successful Lambda invocation."""
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    s3 = _setup_s3(SAMPLE_ROWS)
+
+    conn, _ = _mock_conn()
+    with patch("db.psycopg2.connect", return_value=conn):
+        handler.lambda_handler(_s3_event(BUCKET, KEY), None)
+
+    with pytest.raises(s3.exceptions.NoSuchKey):
+        s3.get_object(Bucket=BUCKET, Key=KEY)
+
+
+@pytest.mark.unit
+@mock_aws
+def test_service_move_not_called_when_db_fails():
+    """move_to_processed is never called when bulk_insert raises; conn.close() still runs."""
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    _setup_s3(SAMPLE_ROWS)
+
+    conn, _ = _mock_conn()
+    with patch("service.connect", return_value=conn), \
+         patch("service.move_to_processed") as mock_move, \
+         patch("service.bulk_insert", side_effect=RuntimeError("DB failure")):
+        with pytest.raises(RuntimeError):
+            service.process(BUCKET, KEY, PROCESSED_BUCKET)
+
+    mock_move.assert_not_called()
+    conn.close.assert_called_once()
