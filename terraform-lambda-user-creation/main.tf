@@ -157,6 +157,12 @@ data "aws_iam_policy_document" "lambda_management_permissions" {
       "ec2:DeleteNetworkInterface",
       "ec2:DescribePrefixLists",
       "ec2:DescribeSecurityGroupRules",
+      "ec2:CreateInternetGateway",
+      "ec2:AttachInternetGateway",
+      "ec2:DescribeInternetGateways",
+      "ec2:DeleteInternetGateway",
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute",
     ]
     resources = ["*"]
   }
