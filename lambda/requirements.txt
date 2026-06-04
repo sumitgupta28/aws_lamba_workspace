@@ -1,1 +1,1 @@
-psycopg2-binary
+# psycopg2-binary is packaged as a Lambda Layer (layer/requirements.txt)

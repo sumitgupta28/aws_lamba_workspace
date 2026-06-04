@@ -1,6 +1,6 @@
 # AWS Lambda — S3 CSV Ingestion to PostgreSQL
 
-A Python Lambda function triggered by S3 uploads that parses a CSV of user records and inserts them into a PostgreSQL database. Infrastructure is managed with Terraform.
+A Python Lambda function triggered by S3 uploads that parses a CSV of user records and inserts them into a PostgreSQL database. Infrastructure is managed with Terraform. The function is structured as a four-layer architecture with `psycopg2` packaged as a separate Lambda Layer.
 
 ---
 
@@ -11,47 +11,63 @@ A Python Lambda function triggered by S3 uploads that parses a CSV of user recor
 ├── data/
 │   └── users.csv                        # Generated test CSV (100 user records)
 ├── lambda/
-│   ├── handler.py                       # Lambda function source
-│   ├── requirements.txt                 # Runtime dependencies (psycopg2)
-│   └── requirements-dev.txt            # Test dependencies (moto, pytest)
+│   ├── handler.py                       # Entry point — event parsing + response
+│   ├── service.py                       # Orchestration layer
+│   ├── db.py                            # Data-access layer (DDL + bulk insert)
+│   ├── s3_reader.py                     # S3 fetch layer
+│   ├── requirements.txt                 # Runtime deps for function zip (empty; psycopg2 is in layer)
+│   └── requirements-dev.txt            # Test deps: moto, boto3, psycopg2-binary, pytest
+├── layer/
+│   └── requirements.txt                 # Lambda Layer deps: psycopg2-binary
 ├── scripts/
-│   ├── package.sh                       # Builds terraform/lambda.zip
+│   ├── package.sh                       # Builds terraform-lambda/layer.zip + lambda.zip
 │   └── generate_users_csv.py           # Generates data/users.csv
-├── terraform-lambda/                    # Terraform: Lambda + API Gateway + S3 trigger
+├── terraform-lambda/                    # Terraform: Lambda + Layer + RDS + S3 trigger
 ├── terraform-lambda-user-creation/      # Terraform: one-time IAM bootstrap
 ├── tests/
-│   └── test_handler_local.py           # Unit + integration tests
+│   └── test_handler_local.py           # Per-layer unit + integration tests
 ├── docker-compose.yml                   # Local Postgres (port 5433)
 └── pytest.ini                           # Test mark definitions
 ```
 
 ---
 
-## How the Lambda Works
+## Architecture
+
+### Lambda Layer Structure
+
+```
+terraform-lambda/
+├── layer.zip          ← psycopg2-binary (python/lib/python3.12/site-packages/)
+└── lambda.zip         ← function source (handler.py, service.py, db.py, s3_reader.py)
+```
+
+### Code Layers
 
 ```
 S3 upload (users.csv)
        │
        ▼
-lambda_handler(event, context)
+handler.lambda_handler(event, context)   ← parse S3 event record
        │
-       ├── Reads CSV from S3 via boto3
-       ├── Connects to PostgreSQL via psycopg2 (env vars for credentials)
-       ├── CREATE TABLE IF NOT EXISTS users (...)
-       └── INSERT rows with ON CONFLICT DO NOTHING
+       ▼
+service.process(bucket, key)             ← orchestrate: S3 read + CSV parse + DB write
+       │
+       ├── s3_reader.fetch_csv()         ← boto3: get_object → decode UTF-8
+       │
+       └── db.bulk_insert(conn, rows)    ← psycopg2: CREATE TABLE IF NOT EXISTS + executemany
+              └── db.connect()           ← psycopg2: connect via env vars
 ```
 
-The S3 event payload provides the bucket name and object key. All DB connection details come from Lambda environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+All DB connection details come from Lambda environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
 
 ---
 
 ## Test & Validation Strategy
 
-Validation is split into two levels so you can catch issues fast locally before touching AWS.
-
 ```
-Level 1 — Unit        : moto (fake S3) + mocked psycopg2   ~2 sec, no Docker
-Level 2 — Integration : moto (fake S3) + real Postgres      ~5 sec, Docker required
+Level 1 — Unit        : moto (fake S3) + mocked psycopg2    ~3 sec, no Docker
+Level 2 — Integration : moto (fake S3) + real Postgres       ~5 sec, Docker required
 Level 3 — AWS         : real S3 trigger + real RDS/Postgres  post-deploy smoke test
 ```
 
@@ -65,26 +81,37 @@ pip install -r lambda/requirements-dev.txt
 
 ### Level 1 — Unit Tests (no Docker required)
 
-**What is tested:**
-- S3 `get_object` is intercepted by `moto` — no AWS credentials needed
-- `psycopg2.connect` is replaced with a `MagicMock` — no database needed
-- Asserts the handler returns `statusCode: 200`
-- Asserts `executemany` is called with the correct number of rows
-- Asserts `commit` is called exactly once
-- Smoke-tested against the full 100-row `data/users.csv`
+Each layer is tested in isolation:
+
+| Test | Layer | What is asserted |
+|---|---|---|
+| `test_s3_reader_fetches_and_decodes` | s3_reader | moto S3 object is fetched and decoded correctly |
+| `test_db_bulk_insert_executes_ddl_and_insert` | db | DDL `execute` and `executemany` called with correct rows |
+| `test_db_bulk_insert_empty_rows` | db | empty row list still calls executemany; commit called |
+| `test_db_connect_uses_env_vars` | db | psycopg2.connect called with correct kwargs from env |
+| `test_service_process_returns_count_and_key` | service | returns `{inserted, file}`; commit and close called |
+| `test_service_process_closes_conn_on_error` | service | conn.close() called even when bulk_insert raises |
+| `test_handler_parses_event_and_returns_200` | handler | statusCode 200, correct body, executemany called with 2 rows |
+| `test_handler_returns_correct_row_count_for_100_rows` | handler | smoke test with full 100-row CSV |
 
 **Run:**
 
 ```bash
-pytest tests/test_handler_local.py -v -m unit
+pytest tests/ -v -m unit
 ```
 
 **Expected output:**
 
 ```
-tests/test_handler_local.py::test_handler_parses_csv_and_calls_db          PASSED
-tests/test_handler_local.py::test_handler_returns_correct_row_count_for_100_rows  PASSED
-2 passed in 1.65s
+tests/test_handler_local.py::test_s3_reader_fetches_and_decodes                    PASSED
+tests/test_handler_local.py::test_db_bulk_insert_executes_ddl_and_insert           PASSED
+tests/test_handler_local.py::test_db_bulk_insert_empty_rows                        PASSED
+tests/test_handler_local.py::test_db_connect_uses_env_vars                         PASSED
+tests/test_handler_local.py::test_service_process_returns_count_and_key            PASSED
+tests/test_handler_local.py::test_service_process_closes_conn_on_error             PASSED
+tests/test_handler_local.py::test_handler_parses_event_and_returns_200             PASSED
+tests/test_handler_local.py::test_handler_returns_correct_row_count_for_100_rows   PASSED
+8 passed in ~3s
 ```
 
 ---
@@ -92,7 +119,6 @@ tests/test_handler_local.py::test_handler_returns_correct_row_count_for_100_rows
 ### Level 2 — Integration Tests (Docker required)
 
 **What is tested:**
-- Everything in Level 1, plus:
 - The `CREATE TABLE` DDL is valid Postgres syntax
 - Column types accept the real CSV values (UUID, DATE, VARCHAR lengths)
 - `ON CONFLICT DO NOTHING` constraint works on re-upload
@@ -107,10 +133,10 @@ docker compose up -d
 Wait for the health check to pass (~5 seconds), then:
 
 ```bash
-pytest tests/test_handler_local.py -v -m integration
+pytest tests/ -v -m integration
 ```
 
-The integration test auto-skips if Postgres is not reachable on `localhost:5433`, so it is safe to run `pytest -v` (all marks) without Docker — Level 1 tests still run.
+The integration test auto-skips if Postgres is not reachable on `localhost:5433`, so it is safe to run `pytest -v` (all marks) without Docker.
 
 **Tear down Postgres when done:**
 
@@ -143,10 +169,10 @@ Expected log line:
 {"inserted": 100, "file": "users/users.csv"}
 ```
 
-**3. Query the database directly** (if RDS is accessible):
+**3. Query the database directly** (RDS is publicly accessible):
 
 ```bash
-psql -h <rds-endpoint> -U <user> -d <dbname> -c "SELECT COUNT(*) FROM users;"
+psql -h <rds-endpoint> -U dbadmin -d csvdb -c "SELECT COUNT(*) FROM users;"
 ```
 
 Expected: `100`
@@ -187,13 +213,13 @@ CSV schema:
 See [`how_to_run.md`](how_to_run.md) for the full Terraform deploy and teardown steps. The short version:
 
 ```bash
-# 1. Package Lambda
+# 1. Build layer.zip (psycopg2) and lambda.zip (source)
 ./scripts/package.sh
 
 # 2. Deploy
 terraform -chdir=terraform-lambda apply
 
-# 3. Redeploy after handler changes
+# 3. Redeploy after any code change
 ./scripts/package.sh && terraform -chdir=terraform-lambda apply -auto-approve
 ```
 
@@ -208,3 +234,4 @@ terraform -chdir=terraform-lambda apply
 | `DB_NAME` | Database name |
 | `DB_USER` | Database user |
 | `DB_PASSWORD` | Database password |
+| `ENVIRONMENT` | Deployment environment tag (e.g. `dev`) |

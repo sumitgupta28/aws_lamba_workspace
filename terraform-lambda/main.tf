@@ -344,6 +344,17 @@ resource "aws_iam_role_policy" "lambda_s3_read" {
 }
 
 # -----------------------------------------------------------------------
+# Lambda Layer — psycopg2 dependency
+# -----------------------------------------------------------------------
+
+resource "aws_lambda_layer_version" "psycopg2" {
+  layer_name          = "${var.function_name}-psycopg2"
+  filename            = "${path.module}/layer.zip"
+  source_code_hash    = filebase64sha256("${path.module}/layer.zip")
+  compatible_runtimes = ["python3.12"]
+}
+
+# -----------------------------------------------------------------------
 # Lambda Function
 # -----------------------------------------------------------------------
 
@@ -358,6 +369,7 @@ resource "aws_lambda_function" "csv_to_rds" {
 
   timeout     = 60
   memory_size = 128
+  layers      = [aws_lambda_layer_version.psycopg2.arn]
 
   vpc_config {
     subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]

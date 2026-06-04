@@ -1,30 +1,34 @@
 #!/usr/bin/env bash
-# Builds a deployable Lambda zip at terraform-lambda/lambda.zip
+# Builds two artefacts in terraform-lambda/:
+#   layer.zip   — psycopg2 Lambda Layer (python/lib/python3.12/site-packages/)
+#   lambda.zip  — function source only (handler.py, service.py, db.py, s3_reader.py)
 set -euo pipefail
 
-LAMBDA_SRC="$(cd "$(dirname "$0")/../lambda" && pwd)"
-OUTPUT="$(cd "$(dirname "$0")/../terraform-lambda" && pwd)/lambda.zip"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LAMBDA_SRC="$REPO_ROOT/lambda"
+LAYER_SRC="$REPO_ROOT/layer"
+TERRAFORM_DIR="$REPO_ROOT/terraform-lambda"
+FUNCTION_ZIP="$TERRAFORM_DIR/lambda.zip"
+LAYER_ZIP="$TERRAFORM_DIR/layer.zip"
 
-echo "Packaging Lambda from: $LAMBDA_SRC"
-echo "Output:               $OUTPUT"
+LAYER_STAGING=$(mktemp -d)
+FUNC_STAGING=$(mktemp -d)
+trap "rm -rf '$LAYER_STAGING' '$FUNC_STAGING'" EXIT
 
-STAGING=$(mktemp -d)
-trap "rm -rf $STAGING" EXIT
+echo "=== Building Lambda layer (psycopg2) ==="
+pip3 install -r "$LAYER_SRC/requirements.txt" \
+    --platform manylinux2014_x86_64 \
+    --implementation cp \
+    --python-version 3.12 \
+    --only-binary=:all: \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    --target "$LAYER_STAGING/python/lib/python3.12/site-packages" \
+    --quiet
+(cd "$LAYER_STAGING" && zip -r "$LAYER_ZIP" .)
+echo "Layer:    $LAYER_ZIP"
 
-if [ -s "$LAMBDA_SRC/requirements.txt" ]; then
-    pip3 install -r "$LAMBDA_SRC/requirements.txt" \
-        --platform manylinux2014_x86_64 \
-        --implementation cp \
-        --python-version 3.12 \
-        --only-binary=:all: \
-        --trusted-host pypi.org \
-        --trusted-host files.pythonhosted.org \
-        --target "$STAGING" \
-        --quiet
-fi
-
-cp "$LAMBDA_SRC/handler.py" "$STAGING/"
-
-(cd "$STAGING" && zip -r "$OUTPUT" .)
-
-echo "Done: $OUTPUT"
+echo "=== Building Lambda function (source only) ==="
+cp "$LAMBDA_SRC"/*.py "$FUNC_STAGING/"
+(cd "$FUNC_STAGING" && zip -r "$FUNCTION_ZIP" .)
+echo "Function: $FUNCTION_ZIP"

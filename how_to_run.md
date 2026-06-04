@@ -25,14 +25,19 @@ You will be prompted for:
 
 ## 1. Package the Lambda Code
 
-This creates `terraform/lambda.zip` from `lambda/handler.py`:
+Builds two artefacts in `terraform-lambda/`:
+
+| Artefact | Contents |
+|---|---|
+| `layer.zip` | `psycopg2-binary` packaged as a Lambda Layer |
+| `lambda.zip` | Function source: `handler.py`, `service.py`, `db.py`, `s3_reader.py` |
 
 ```bash
 chmod +x scripts/package.sh
 ./scripts/package.sh
 ```
 
-Run this again whenever you change `lambda/handler.py`.
+Run this again whenever you change any file under `lambda/` or `layer/`.
 
 ---
 
@@ -41,7 +46,7 @@ Run this again whenever you change `lambda/handler.py`.
 Downloads the AWS provider plugin (one-time per checkout):
 
 ```bash
-terraform -chdir=terraform init
+terraform -chdir=terraform-lambda init
 ```
 
 ---
@@ -51,7 +56,7 @@ terraform -chdir=terraform init
 Dry-run to see what will be created without making any changes:
 
 ```bash
-terraform -chdir=terraform plan
+terraform -chdir=terraform-lambda plan
 ```
 
 ---
@@ -59,66 +64,73 @@ terraform -chdir=terraform plan
 ## 4. Deploy to AWS
 
 ```bash
-terraform -chdir=terraform apply
+terraform -chdir=terraform-lambda apply
 ```
 
-Type `yes` when prompted. After apply completes, Terraform prints:
-
-```
-Outputs:
-  lambda_function_name = "hello-world"
-  lambda_function_arn  = "arn:aws:lambda:us-east-1:123456789:function:hello-world"
-  api_gateway_url      = "https://<id>.execute-api.us-east-1.amazonaws.com"
-  invoke_url           = "https://<id>.execute-api.us-east-1.amazonaws.com/hello"
-```
+Type `yes` when prompted. After apply completes, Terraform prints the Lambda function name, ARN, S3 bucket name, and RDS endpoint.
 
 ---
 
 ## 5. Test the Deployment
 
-**Via HTTP (API Gateway):**
+**Upload the CSV to trigger the Lambda:**
 
 ```bash
-INVOKE_URL=$(terraform -chdir=terraform output -raw invoke_url)
-curl "$INVOKE_URL"
-curl "$INVOKE_URL?name=Sumit"
+aws s3 cp data/users.csv s3://<bucket-name>/users/users.csv \
+  --profile lambda_manager_profile
 ```
 
-Expected response:
+**Watch Lambda logs in real time:**
+
+```bash
+aws logs tail /aws/lambda/<function-name> --follow --profile lambda_manager_profile
+```
+
+Expected log line:
 
 ```json
-{"message": "Hello, Sumit!", "method": "GET", "path": "/hello"}
+{"inserted": 100, "file": "users/users.csv"}
 ```
 
-**Via AWS CLI (direct Lambda invocation):**
+**Query the database directly** (RDS is publicly accessible):
+
+```bash
+psql -h <rds-endpoint> -U dbadmin -d csvdb -c "SELECT COUNT(*) FROM users;"
+```
+
+**Direct Lambda invocation via AWS CLI:**
 
 ```bash
 aws lambda invoke \
-  --function-name hello-world \
-  --payload '{"httpMethod":"GET","path":"/hello","queryStringParameters":{"name":"Sumit"}}' \
+  --function-name csv-to-rds \
+  --payload '{"Records":[{"s3":{"bucket":{"name":"<bucket>"},"object":{"key":"users/users.csv"}}}]}' \
   --cli-binary-format raw-in-base64-out \
+  --profile lambda_manager_profile \
   /tmp/response.json && cat /tmp/response.json
-```
-
-**View logs in CloudWatch:**
-
-```bash
-aws logs tail /aws/lambda/hello-world --follow
 ```
 
 ---
 
-## 6. Local Test (No AWS Required)
+## 6. Run Tests Locally (No AWS Required)
+
+Install test dependencies:
 
 ```bash
-python3 -c "
-import json, importlib.util
-spec = importlib.util.spec_from_file_location('handler', 'lambda/handler.py')
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-result = mod.lambda_handler({'httpMethod':'GET','path':'/hello','queryStringParameters':{'name':'Sumit'}}, None)
-print(json.dumps(result, indent=2))
-"
+pip install -r lambda/requirements-dev.txt
+```
+
+**Unit tests** (no Docker, ~3 sec):
+
+```bash
+pytest tests/ -v -m unit
+```
+
+**Integration tests** (requires Docker):
+
+```bash
+docker compose up -d
+pytest tests/ -v -m integration
+docker compose down
 ```
 
 ---
@@ -126,7 +138,7 @@ print(json.dumps(result, indent=2))
 ## 7. Redeploy After Code Changes
 
 ```bash
-./scripts/package.sh && terraform -chdir=terraform apply -auto-approve
+./scripts/package.sh && terraform -chdir=terraform-lambda apply -auto-approve
 ```
 
 ---
@@ -136,5 +148,5 @@ print(json.dumps(result, indent=2))
 Destroys all AWS resources created by Terraform:
 
 ```bash
-terraform -chdir=terraform destroy
+terraform -chdir=terraform-lambda destroy
 ```

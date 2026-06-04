@@ -1,14 +1,17 @@
 """
-Local validation for lambda/handler.py.
+Multi-layer Lambda test suite.
 
-Level 1 — Unit test  : moto fakes S3; psycopg2 is mocked (no Docker needed).
-Level 2 — Integration: moto fakes S3; real Postgres via docker-compose.
+Layer coverage:
+  s3_reader  — fetches CSV content from S3
+  db         — DDL + bulk insert against Postgres
+  service    — orchestrates s3_reader + db
+  handler    — event parsing + response shaping
 
-Run unit tests only (fast, no Docker):
-    pytest tests/test_handler_local.py -v -m unit
+Run unit tests (no Docker):
+    pytest tests/ -v -m unit
 
-Run integration tests (needs `docker compose up -d` first):
-    pytest tests/test_handler_local.py -v -m integration
+Run integration tests (needs docker compose up -d):
+    pytest tests/ -v -m integration
 """
 
 import csv
@@ -16,7 +19,6 @@ import io
 import json
 import os
 import sys
-import unittest
 from unittest.mock import MagicMock, patch
 
 import boto3
@@ -24,6 +26,11 @@ import pytest
 from moto import mock_aws
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lambda"))
+
+import db          # noqa: E402
+import handler     # noqa: E402
+import s3_reader   # noqa: E402
+import service     # noqa: E402
 
 BUCKET = "test-users-bucket"
 KEY = "users/users.csv"
@@ -48,6 +55,16 @@ SAMPLE_ROWS = [
     },
 ]
 
+_AWS_ENV = {
+    "AWS_DEFAULT_REGION": "us-east-1",
+    "AWS_ACCESS_KEY_ID": "test",
+    "AWS_SECRET_ACCESS_KEY": "test",
+}
+_DB_ENV = {
+    "DB_HOST": "localhost", "DB_PORT": "5432",
+    "DB_NAME": "testdb", "DB_USER": "user", "DB_PASSWORD": "pass",
+}
+
 
 def _make_csv(rows: list[dict]) -> str:
     buf = io.StringIO()
@@ -61,71 +78,145 @@ def _s3_event(bucket: str, key: str) -> dict:
     return {"Records": [{"s3": {"bucket": {"name": bucket}, "object": {"key": key}}}]}
 
 
+def _mock_conn():
+    conn = MagicMock()
+    cur = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cur
+    return conn, cur
+
+
 # ---------------------------------------------------------------------------
-# Level 1 — Unit tests (moto S3 + mocked psycopg2)
+# s3_reader layer
 # ---------------------------------------------------------------------------
 
 @pytest.mark.unit
 @mock_aws
-def test_handler_parses_csv_and_calls_db():
-    """Handler extracts rows from S3 and passes them to psycopg2 executemany."""
-    os.environ.update({
-        "DB_HOST": "localhost", "DB_PORT": "5432",
-        "DB_NAME": "testdb", "DB_USER": "user", "DB_PASSWORD": "pass",
-        "AWS_DEFAULT_REGION": "us-east-1",
-        "AWS_ACCESS_KEY_ID": "test", "AWS_SECRET_ACCESS_KEY": "test",
-    })
-
-    # Put CSV in moto-faked S3
+def test_s3_reader_fetches_and_decodes():
+    os.environ.update(_AWS_ENV)
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS))
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
 
-    mock_conn = MagicMock()
-    mock_cur = MagicMock()
-    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+    result = s3_reader.fetch_csv(BUCKET, KEY)
+    assert "Alice" in result
+    assert "Bob" in result
 
-    with patch("psycopg2.connect", return_value=mock_conn):
-        import handler
+
+# ---------------------------------------------------------------------------
+# db layer
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_db_bulk_insert_executes_ddl_and_insert():
+    conn, cur = _mock_conn()
+    rows = [(
+        "aaaaaaaa-0000-0000-0000-000000000001", "Alice", "Smith",
+        "alice@example.com", "+1-555-100-0001", "1990-06-15", "1 Main St",
+        "Austin", "TX", "73301", "US", "Engineering", "active", "2024-01-10",
+    )]
+    db.bulk_insert(conn, rows)
+
+    cur.execute.assert_called_once()
+    cur.executemany.assert_called_once()
+    assert cur.executemany.call_args[0][1] == rows
+    conn.commit.assert_called_once()
+
+
+@pytest.mark.unit
+def test_db_bulk_insert_empty_rows():
+    conn, cur = _mock_conn()
+    db.bulk_insert(conn, [])
+    cur.executemany.assert_called_once_with(db._INSERT, [])
+    conn.commit.assert_called_once()
+
+
+@pytest.mark.unit
+def test_db_connect_uses_env_vars():
+    os.environ.update(_DB_ENV)
+    with patch("db.psycopg2.connect", return_value=MagicMock()) as mock_pg:
+        db.connect()
+    mock_pg.assert_called_once_with(
+        host="localhost", port=5432, dbname="testdb",
+        user="user", password="pass", connect_timeout=10,
+    )
+
+
+# ---------------------------------------------------------------------------
+# service layer
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+@mock_aws
+def test_service_process_returns_count_and_key():
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket=BUCKET)
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+
+    conn, _ = _mock_conn()
+    with patch("service.connect", return_value=conn):
+        result = service.process(BUCKET, KEY)
+
+    assert result == {"inserted": 2, "file": KEY}
+    conn.commit.assert_called_once()
+    conn.close.assert_called_once()
+
+
+@pytest.mark.unit
+@mock_aws
+def test_service_process_closes_conn_on_error():
+    """conn.close() is called even when bulk_insert raises."""
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket=BUCKET)
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+
+    conn, _ = _mock_conn()
+    with patch("service.connect", return_value=conn), \
+         patch("service.bulk_insert", side_effect=RuntimeError("DB failure")):
+        with pytest.raises(RuntimeError, match="DB failure"):
+            service.process(BUCKET, KEY)
+    conn.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# handler layer (end-to-end unit)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+@mock_aws
+def test_handler_parses_event_and_returns_200():
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket=BUCKET)
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
+
+    conn, cur = _mock_conn()
+    with patch("db.psycopg2.connect", return_value=conn):
         response = handler.lambda_handler(_s3_event(BUCKET, KEY), None)
 
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["inserted"] == 2
     assert body["file"] == KEY
-
-    # executemany must have been called with 2 rows
-    call_args = mock_cur.executemany.call_args
-    assert len(call_args[0][1]) == 2
-    mock_conn.commit.assert_called_once()
+    assert cur.executemany.call_args[0][1].__len__() == 2
+    conn.commit.assert_called_once()
 
 
 @pytest.mark.unit
 @mock_aws
 def test_handler_returns_correct_row_count_for_100_rows():
-    """Smoke-test with the full generated CSV (100 rows)."""
-    os.environ.update({
-        "DB_HOST": "localhost", "DB_PORT": "5432",
-        "DB_NAME": "testdb", "DB_USER": "user", "DB_PASSWORD": "pass",
-        "AWS_DEFAULT_REGION": "us-east-1",
-        "AWS_ACCESS_KEY_ID": "test", "AWS_SECRET_ACCESS_KEY": "test",
-    })
-
+    os.environ.update({**_AWS_ENV, **_DB_ENV})
     csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "users.csv")
     with open(csv_path) as f:
         csv_content = f.read()
 
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=csv_content)
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=csv_content.encode())
 
-    mock_conn = MagicMock()
-    mock_cur = MagicMock()
-    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
-
-    with patch("psycopg2.connect", return_value=mock_conn):
-        import importlib, handler
-        importlib.reload(handler)
+    conn, _ = _mock_conn()
+    with patch("db.psycopg2.connect", return_value=conn):
         response = handler.lambda_handler(_s3_event(BUCKET, KEY), None)
 
     assert response["statusCode"] == 200
@@ -133,7 +224,7 @@ def test_handler_returns_correct_row_count_for_100_rows():
 
 
 # ---------------------------------------------------------------------------
-# Level 2 — Integration tests (moto S3 + real Postgres via docker-compose)
+# Integration tests (moto S3 + real Postgres via docker-compose)
 # ---------------------------------------------------------------------------
 
 def _pg_available() -> bool:
@@ -155,24 +246,20 @@ def _pg_available() -> bool:
 def test_handler_inserts_into_real_postgres():
     """End-to-end: moto S3 + real Postgres — verifies actual rows in DB."""
     os.environ.update({
+        **_AWS_ENV,
         "DB_HOST": "localhost", "DB_PORT": "5433",
         "DB_NAME": "testdb", "DB_USER": "testuser", "DB_PASSWORD": "testpass",
-        "AWS_DEFAULT_REGION": "us-east-1",
-        "AWS_ACCESS_KEY_ID": "test", "AWS_SECRET_ACCESS_KEY": "test",
     })
 
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=BUCKET)
-    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS))
+    s3.put_object(Bucket=BUCKET, Key=KEY, Body=_make_csv(SAMPLE_ROWS).encode())
 
-    import importlib, handler
-    importlib.reload(handler)
     response = handler.lambda_handler(_s3_event(BUCKET, KEY), None)
-
     assert response["statusCode"] == 200
 
-    import psycopg2
-    conn = psycopg2.connect(
+    import psycopg2 as pg
+    conn = pg.connect(
         host="localhost", port=5433, dbname="testdb",
         user="testuser", password="testpass",
     )
@@ -182,7 +269,6 @@ def test_handler_inserts_into_real_postgres():
             count = cur.fetchone()[0]
         assert count == 2, f"Expected 2 rows, got {count}"
     finally:
-        # clean up for test idempotency
         with conn.cursor() as cur:
             cur.execute("DROP TABLE IF EXISTS users")
         conn.commit()
